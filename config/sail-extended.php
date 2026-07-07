@@ -4,7 +4,7 @@ return [
 
     'default_php_version' => '8.5',
 
-    'php_versions' => ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5'],
+    'php_versions' => ['8.2', '8.3', '8.4', '8.5'],
 
     'manifest_path' => 'docker/.sail-extended.json',
 
@@ -22,30 +22,25 @@ return [
     'octane' => [
         'servers' => ['frankenphp', 'swoole', 'roadrunner'],
         'default_server' => 'frankenphp',
+        'roadrunner_version' => '2025.1.1',
         'images' => [
             'frankenphp' => [
-                '8.0' => 'dunglas/frankenphp:php8.0',
-                '8.1' => 'dunglas/frankenphp:php8.1',
                 '8.2' => 'dunglas/frankenphp:php8.2',
                 '8.3' => 'dunglas/frankenphp:php8.3',
                 '8.4' => 'dunglas/frankenphp:php8.4',
                 '8.5' => 'dunglas/frankenphp:php8.5',
             ],
             'swoole' => [
-                '8.0' => 'phpswoole/swoole:php8.0-alpine',
-                '8.1' => 'phpswoole/swoole:php8.1-alpine',
                 '8.2' => 'phpswoole/swoole:php8.2-alpine',
                 '8.3' => 'phpswoole/swoole:php8.3-alpine',
                 '8.4' => 'phpswoole/swoole:php8.4-alpine',
                 '8.5' => 'phpswoole/swoole:php8.5-alpine',
             ],
             'roadrunner' => [
-                '8.0' => 'spiralscout/roadrunner:2024.3-php8.0-alpine',
-                '8.1' => 'spiralscout/roadrunner:2024.3-php8.1-alpine',
-                '8.2' => 'spiralscout/roadrunner:2024.3-php8.2-alpine',
-                '8.3' => 'spiralscout/roadrunner:2024.3-php8.3-alpine',
-                '8.4' => 'spiralscout/roadrunner:2024.3-php8.4-alpine',
-                '8.5' => 'spiralscout/roadrunner:2024.3-php8.5-alpine',
+                '8.2' => 'php:8.2-cli-alpine3.21',
+                '8.3' => 'php:8.3-cli-alpine3.21',
+                '8.4' => 'php:8.4-cli-alpine3.21',
+                '8.5' => 'php:8.5-cli-alpine3.21',
             ],
         ],
     ],

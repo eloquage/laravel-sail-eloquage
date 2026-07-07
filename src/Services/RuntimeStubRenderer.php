@@ -24,21 +24,30 @@ class RuntimeStubRenderer
 
         $phpPkg = 'php'.str_replace('.', '', $phpVersion);
 
-        return str_replace(
-            [
-                '{{PHP_VERSION}}',
-                '{{PHP_PKG}}',
-                '{{PHP_INI_PATH}}',
-                '{{XDEBUG_PACKAGE}}',
-            ],
-            [
-                $phpVersion,
-                $phpPkg,
-                $this->phpIniPath($phpPkg),
-                $phpPkg.'-pecl-xdebug',
-            ],
-            $contents
-        );
+        $replacements = [
+            '{{PHP_VERSION}}',
+            '{{PHP_PKG}}',
+            '{{PHP_INI_PATH}}',
+            '{{XDEBUG_PACKAGE}}',
+            '{{ROADRUNNER_VERSION}}',
+        ];
+
+        $values = [
+            $phpVersion,
+            $phpPkg,
+            $this->phpIniPath($phpPkg),
+            $phpPkg.'-pecl-xdebug',
+            $this->roadrunnerVersion(),
+        ];
+
+        return str_replace($replacements, $values, $contents);
+    }
+
+    protected function roadrunnerVersion(): string
+    {
+        $config = require dirname(__DIR__, 2).'/config/sail-extended.php';
+
+        return (string) ($config['octane']['roadrunner_version'] ?? '2025.1.1');
     }
 
     protected function phpIniPath(string $phpPkg): string
