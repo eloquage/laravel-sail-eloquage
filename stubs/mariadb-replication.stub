@@ -1,0 +1,41 @@
+mariadb:
+    image: 'mariadb:{{VERSION}}'
+    ports:
+        - '${FORWARD_DB_PORT:-3306}:3306'
+    environment:
+        MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+        MYSQL_ROOT_HOST: "%"
+        MYSQL_DATABASE: '${DB_DATABASE}'
+        MYSQL_USER: '${DB_USERNAME}'
+        MYSQL_PASSWORD: '${DB_PASSWORD}'
+        MYSQL_REPLICATION_MODE: 'master'
+        MYSQL_REPLICATION_USER: 'replicator'
+        MYSQL_REPLICATION_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+        - 'sail-mariadb:/var/lib/mysql'
+        - './docker/mariadb/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+        - './docker/mariadb/replication/master.cnf:/etc/mysql/conf.d/replication.cnf'
+    networks:
+        - sail
+    healthcheck:
+        test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+        retries: 3
+        timeout: 5s
+mariadb-replica:
+    image: 'mariadb:{{VERSION}}'
+    ports:
+        - '${FORWARD_DB_REPLICA_PORT:-3307}:3306'
+    environment:
+        MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+        MYSQL_REPLICATION_MODE: 'slave'
+        MYSQL_MASTER_HOST: 'mariadb'
+        MYSQL_MASTER_PORT: '3306'
+        MYSQL_REPLICATION_USER: 'replicator'
+        MYSQL_REPLICATION_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+        - 'sail-mariadb-replica:/var/lib/mysql'
+        - './docker/mariadb/replication/replica.cnf:/etc/mysql/conf.d/replication.cnf'
+    depends_on:
+        - mariadb
+    networks:
+        - sail

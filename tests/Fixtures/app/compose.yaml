@@ -1,0 +1,212 @@
+services:
+    laravel.test:
+        image: sail-8.5/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - mysql-replica
+            - pgsql
+            - pgsql-replica
+            - redis
+            - redis-replica
+            - mongodb
+            - memcached
+        build:
+            context: ./docker/8.5
+            dockerfile: Dockerfile.frankenphp
+            target: development
+            args:
+                WWWGROUP: '${WWWGROUP}'
+                HAS_MYSQL: '0'
+                HAS_POSTGRES: '0'
+                HAS_MONGO: '0'
+                HAS_REDIS: '0'
+                HAS_MEMCACHED: '0'
+                OCTANE_BASE_TAG: 'dunglas/frankenphp:php8.5'
+    mysql:
+        image: 'mysql:8.4'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_REPLICATION_MODE: master
+            MYSQL_REPLICATION_USER: replicator
+            MYSQL_REPLICATION_PASSWORD: '${DB_PASSWORD}'
+        volumes:
+            - 'sail-mysql:/var/lib/mysql'
+            - './docker/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+            - './docker/mysql/replication/master.cnf:/etc/mysql/conf.d/replication.cnf'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-p${DB_PASSWORD}'
+            retries: 3
+            timeout: 5s
+    mysql-replica:
+        image: 'mysql:8.4'
+        ports:
+            - '${FORWARD_DB_REPLICA_PORT:-3307}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_REPLICATION_MODE: slave
+            MYSQL_MASTER_HOST: mysql
+            MYSQL_MASTER_PORT: '3306'
+            MYSQL_REPLICATION_USER: replicator
+            MYSQL_REPLICATION_PASSWORD: '${DB_PASSWORD}'
+        volumes:
+            - 'sail-mysql-replica:/var/lib/mysql'
+            - './docker/mysql/replication/replica.cnf:/etc/mysql/conf.d/replication.cnf'
+        depends_on:
+            - mysql
+        networks:
+            - sail
+    pgsql:
+        image: 'pgvector/pgvector:pg18'
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        environment:
+            PGPASSWORD: '${DB_PASSWORD:-secret}'
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+            POSTGRES_REPLICATION_USER: replicator
+            POSTGRES_REPLICATION_PASSWORD: '${DB_PASSWORD:-secret}'
+        volumes:
+            - 'sail-pgsql:/var/lib/postgresql/data'
+            - './docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+            - './docker/pgsql/replication/pg_hba.conf:/etc/postgresql/pg_hba.conf'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - pg_isready
+                - '-q'
+                - '-d'
+                - '${DB_DATABASE}'
+                - '-U'
+                - '${DB_USERNAME}'
+            retries: 3
+            timeout: 5s
+    pgsql-replica:
+        image: 'pgvector/pgvector:pg18'
+        ports:
+            - '${FORWARD_DB_REPLICA_PORT:-5433}:5432'
+        environment:
+            PGUSER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+            POSTGRES_PRIMARY_HOST: pgsql
+            POSTGRES_PRIMARY_PORT: '5432'
+            POSTGRES_REPLICATION_USER: replicator
+            POSTGRES_REPLICATION_PASSWORD: '${DB_PASSWORD:-secret}'
+        volumes:
+            - 'sail-pgsql-replica:/var/lib/postgresql/data'
+        depends_on:
+            - pgsql
+        networks:
+            - sail
+    redis:
+        image: 'redis:8-alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        volumes:
+            - 'sail-redis:/data'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+    redis-replica:
+        image: 'redis:8-alpine'
+        command: 'redis-server --replicaof redis 6379'
+        ports:
+            - '${FORWARD_REDIS_REPLICA_PORT:-6380}:6379'
+        volumes:
+            - 'sail-redis-replica:/data'
+            - './docker/redis/replication/replica.conf:/usr/local/etc/redis/redis.conf'
+        depends_on:
+            - redis
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+    mongodb:
+        image: 'mongo:8'
+        command:
+            - mongod
+            - '--replSet'
+            - rs0
+            - '--bind_ip_all'
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: '${MONGODB_USERNAME:-}'
+            MONGO_INITDB_ROOT_PASSWORD: '${MONGODB_PASSWORD:-}'
+        volumes:
+            - 'sail-mongodb:/data/db'
+            - './docker/mongodb/replication/replica-set-init.js:/docker-entrypoint-initdb.d/replica-set-init.js'
+        ports:
+            - '${FORWARD_MONGODB_PORT:-27017}:27017'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - mongosh
+                - 'mongodb://localhost:27017/admin'
+                - '--eval=db.runCommand({ping:1})'
+            retries: 3
+            timeout: 5s
+    memcached:
+        image: 'memcached:alpine'
+        ports:
+            - '${FORWARD_MEMCACHED_PORT:-11211}:11211'
+        networks:
+            - sail
+networks:
+    sail:
+        driver: bridge
+volumes:
+    sail-mysql:
+        driver: local
+    sail-mysql-replica:
+        driver: local
+    sail-pgsql:
+        driver: local
+    sail-pgsql-replica:
+        driver: local
+    sail-redis:
+        driver: local
+    sail-redis-replica:
+        driver: local
+    sail-mongodb:
+        driver: local

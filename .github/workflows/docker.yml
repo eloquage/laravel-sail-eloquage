@@ -1,0 +1,98 @@
+name: docker
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
+        runtime: [serve, frankenphp, swoole, roadrunner]
+        target: [development, production]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Docker build context
+        id: context
+        run: |
+          CONTEXT=$(php .github/scripts/prepare-docker-context.php "${{ matrix.php }}" "${{ matrix.runtime }}")
+          echo "path=${CONTEXT}" >> "$GITHUB_OUTPUT"
+          echo "dockerfile=$(basename "$(find "${CONTEXT}" -maxdepth 1 -name 'Dockerfile*' | head -n 1)")" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve package version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.1.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}
+            type=raw,value=php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}-${{ steps.version.outputs.value }},enable=${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
+
+      - name: Resolve Octane base image tag
+        if: matrix.runtime != 'serve'
+        id: octane
+        run: |
+          TAG=$(php -r '$config = require "config/sail-extended.php"; echo $config["octane"]["images"]["'"${{ matrix.runtime }}"'"]["'"${{ matrix.php }}"'"];')
+          echo "base_tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ steps.context.outputs.path }}
+          file: ${{ steps.context.outputs.path }}/${{ steps.context.outputs.dockerfile }}
+          target: ${{ matrix.target }}
+          push: ${{ env.ACT != 'true' }}
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}
+          build-args: |
+            WWWGROUP=1000
+            HAS_MYSQL=1
+            HAS_POSTGRES=1
+            HAS_MONGO=1
+            HAS_REDIS=1
+            HAS_MEMCACHED=1
+            OCTANE_BASE_TAG=${{ steps.octane.outputs.base_tag }}
+
+      - name: Smoke test
+        run: |
+          IMAGE="ghcr.io/${{ github.repository }}:php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}"
+          docker run --rm --entrypoint php "$IMAGE" -v

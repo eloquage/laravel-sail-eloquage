@@ -1,0 +1,34 @@
+typesense:
+    image: 'typesense/typesense:{{VERSION}}'
+    ports:
+        - '${FORWARD_TYPESENSE_PORT:-8108}:8108'
+    environment:
+        TYPESENSE_DATA_DIR: '/typesense-data'
+        TYPESENSE_API_KEY: '${TYPESENSE_API_KEY:-xyz}'
+        TYPESENSE_ENABLE_CORS: '${TYPESENSE_ENABLE_CORS:-true}'
+        TYPESENSE_PEERING_ADDRESS: 'typesense'
+        TYPESENSE_PEERING_PORT: '8107'
+        TYPESENSE_NODES: '/typesense/nodes'
+    volumes:
+        - 'sail-typesense:/typesense-data'
+        - './docker/typesense/replication/nodes:/typesense/nodes'
+    networks:
+        - sail
+typesense-2:
+    image: 'typesense/typesense:{{VERSION}}'
+    ports:
+        - '${FORWARD_TYPESENSE_REPLICA_PORT:-8109}:8108'
+    environment:
+        TYPESENSE_DATA_DIR: '/typesense-data'
+        TYPESENSE_API_KEY: '${TYPESENSE_API_KEY:-xyz}'
+        TYPESENSE_ENABLE_CORS: '${TYPESENSE_ENABLE_CORS:-true}'
+        TYPESENSE_PEERING_ADDRESS: 'typesense-2'
+        TYPESENSE_PEERING_PORT: '8107'
+        TYPESENSE_NODES: '/typesense/nodes'
+    volumes:
+        - 'sail-typesense-2:/typesense-data'
+        - './docker/typesense/replication/nodes:/typesense/nodes'
+    depends_on:
+        - typesense
+    networks:
+        - sail

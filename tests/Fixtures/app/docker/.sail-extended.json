@@ -1,0 +1,47 @@
+{
+    "runtime": {
+        "octane": true,
+        "octaneServer": "frankenphp"
+    },
+    "services": {
+        "mysql": {
+            "version": "8.4",
+            "pgvector": false,
+            "replication": true
+        },
+        "pgsql": {
+            "version": "18",
+            "pgvector": true,
+            "replication": true
+        },
+        "redis": {
+            "version": "8",
+            "pgvector": false,
+            "replication": true
+        },
+        "mongodb": {
+            "version": "8",
+            "pgvector": false,
+            "replication": true
+        }
+    },
+    "redis": {
+        "horizon": true,
+        "cache": true,
+        "session": false
+    },
+    "supervisor": {
+        "schedule": false,
+        "horizon": false,
+        "vite": false,
+        "packageManager": "pnpm"
+    },
+    "dependencies": {
+        "hasMysql": true,
+        "hasPostgres": true,
+        "hasMongo": true,
+        "hasRedis": true,
+        "hasMemcached": true
+    },
+    "imageMode": "local"
+}

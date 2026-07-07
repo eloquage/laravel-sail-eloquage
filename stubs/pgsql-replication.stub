@@ -1,0 +1,38 @@
+pgsql:
+    image: 'postgres:{{VERSION}}-alpine'
+    ports:
+        - '${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+        PGPASSWORD: '${DB_PASSWORD:-secret}'
+        POSTGRES_DB: '${DB_DATABASE}'
+        POSTGRES_USER: '${DB_USERNAME}'
+        POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+        POSTGRES_REPLICATION_USER: 'replicator'
+        POSTGRES_REPLICATION_PASSWORD: '${DB_PASSWORD:-secret}'
+    volumes:
+        - 'sail-pgsql:/var/lib/postgresql/data'
+        - './docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+        - './docker/pgsql/replication/pg_hba.conf:/etc/postgresql/pg_hba.conf'
+    networks:
+        - sail
+    healthcheck:
+        test: ["CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}"]
+        retries: 3
+        timeout: 5s
+pgsql-replica:
+    image: 'postgres:{{VERSION}}-alpine'
+    ports:
+        - '${FORWARD_DB_REPLICA_PORT:-5433}:5432'
+    environment:
+        PGUSER: '${DB_USERNAME}'
+        POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+        POSTGRES_PRIMARY_HOST: 'pgsql'
+        POSTGRES_PRIMARY_PORT: '5432'
+        POSTGRES_REPLICATION_USER: 'replicator'
+        POSTGRES_REPLICATION_PASSWORD: '${DB_PASSWORD:-secret}'
+    volumes:
+        - 'sail-pgsql-replica:/var/lib/postgresql/data'
+    depends_on:
+        - pgsql
+    networks:
+        - sail

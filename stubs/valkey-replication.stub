@@ -1,0 +1,28 @@
+valkey:
+    image: 'valkey/valkey:{{VERSION}}-alpine'
+    ports:
+        - '${FORWARD_VALKEY_PORT:-6379}:6379'
+    volumes:
+        - 'sail-valkey:/data'
+    networks:
+        - sail
+    healthcheck:
+        test: ["CMD", "valkey-cli", "ping"]
+        retries: 3
+        timeout: 5s
+valkey-replica:
+    image: 'valkey/valkey:{{VERSION}}-alpine'
+    command: valkey-server --replicaof valkey 6379
+    ports:
+        - '${FORWARD_VALKEY_REPLICA_PORT:-6380}:6379'
+    volumes:
+        - 'sail-valkey-replica:/data'
+        - './docker/valkey/replication/replica.conf:/usr/local/etc/valkey/valkey.conf'
+    depends_on:
+        - valkey
+    networks:
+        - sail
+    healthcheck:
+        test: ["CMD", "valkey-cli", "ping"]
+        retries: 3
+        timeout: 5s

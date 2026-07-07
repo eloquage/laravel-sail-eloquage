@@ -1,0 +1,29 @@
+ARG OCTANE_BASE_TAG=phpswoole/swoole:php8.0-alpine
+FROM ${OCTANE_BASE_TAG} AS base
+
+ARG WWWGROUP=1000
+
+ENV SUPERVISOR_PHP_COMMAND="/usr/local/bin/php artisan octane:start --server=swoole --host=0.0.0.0 --port=80"
+ENV SUPERVISOR_PHP_USER="sail"
+
+WORKDIR /var/www/html
+
+RUN apk add --no-cache bash git curl supervisor gosu mysql-client postgresql-client \
+    && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
+    && addgroup -g ${WWWGROUP} sail 2>/dev/null || true \
+    && adduser -D -G sail -u 1337 sail \
+    && mkdir -p /etc/supervisor/conf.d
+
+COPY php.ini /usr/local/etc/php/conf.d/99-sail.ini
+COPY start-container /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container
+
+EXPOSE 80
+ENTRYPOINT ["start-container"]
+
+FROM base AS development
+RUN apk add --no-cache nodejs npm
+COPY supervisord.swoole.conf /etc/supervisor/conf.d/supervisord.conf
+
+FROM base AS production
+COPY supervisord.swoole.conf /etc/supervisor/conf.d/supervisord.conf

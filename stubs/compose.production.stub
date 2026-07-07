@@ -1,0 +1,19 @@
+# For more information: https://laravel.com/docs/sail
+services:
+    laravel.test:
+{{LARAVEL_TEST_IMAGE_BLOCK}}
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+networks:
+    sail:
+        driver: bridge

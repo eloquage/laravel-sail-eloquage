@@ -1,0 +1,33 @@
+ARG OCTANE_BASE_TAG=dunglas/frankenphp:php8.4
+FROM ${OCTANE_BASE_TAG} AS base
+
+ARG WWWGROUP=1000
+
+ENV SUPERVISOR_PHP_COMMAND="/usr/local/bin/php artisan octane:frankenphp --host=0.0.0.0 --port=80"
+ENV SUPERVISOR_PHP_USER="sail"
+
+WORKDIR /var/www/html
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl supervisor gosu default-mysql-client postgresql-client \
+    && curl -sLS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer \
+    && groupadd -g ${WWWGROUP} sail 2>/dev/null || true \
+    && useradd -ms /bin/bash -u 1337 -g sail sail 2>/dev/null || true \
+    && mkdir -p /etc/supervisor/conf.d
+
+COPY php.ini /usr/local/etc/php/conf.d/99-sail.ini
+COPY start-container /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container
+
+EXPOSE 80
+ENTRYPOINT ["start-container"]
+
+FROM base AS development
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY supervisord.frankenphp.conf /etc/supervisor/conf.d/supervisord.conf
+COPY octane/Caddyfile /etc/caddy/Caddyfile
+
+FROM base AS production
+COPY supervisord.frankenphp.conf /etc/supervisor/conf.d/supervisord.conf
+COPY octane/Caddyfile /etc/caddy/Caddyfile
