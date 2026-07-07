@@ -18,7 +18,7 @@ it('builds full registry image references', function () {
     $runtime = new RuntimeOptions(octane: true, octaneServer: 'swoole');
 
     expect($resolver->imageReference($runtime, '8.4', 'development'))
-        ->toBe('ghcr.io/eloquage/laravel-sail-extended:php-8.4-swoole-development');
+        ->toBe('ghcr.io/eloquage/laravel-sail-eloquage:php-8.4-swoole-development');
 });
 
 it('requires local build when dependency flags are not full stack', function () {

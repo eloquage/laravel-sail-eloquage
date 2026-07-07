@@ -2,6 +2,8 @@ name: docker
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -9,6 +11,10 @@ on:
 permissions:
   contents: read
   packages: write
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   docker:
@@ -20,10 +26,14 @@ jobs:
         php: ['8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
         runtime: [serve, frankenphp, swoole, roadrunner]
         target: [development, production]
+        exclude:
+          # Alpine does not ship php85 packages yet; serve images use apk php{version} packages.
+          - php: '8.5'
+            runtime: serve
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
@@ -45,7 +55,7 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.2.0
+        uses: docker/setup-buildx-action@v4.1.0
 
       - name: Log in to GHCR
         uses: docker/login-action@v4
@@ -77,8 +87,7 @@ jobs:
           context: ${{ steps.context.outputs.path }}
           file: ${{ steps.context.outputs.path }}/${{ steps.context.outputs.dockerfile }}
           target: ${{ matrix.target }}
-          push: ${{ env.ACT != 'true' }}
-          load: true
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}
@@ -94,5 +103,5 @@ jobs:
 
       - name: Smoke test
         run: |
-          IMAGE="ghcr.io/${{ github.repository }}:php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}"
-          docker run --rm --entrypoint php "$IMAGE" -v
+          docker pull "ghcr.io/${{ github.repository }}:php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}"
+          docker run --rm --entrypoint php "ghcr.io/${{ github.repository }}:php-${{ matrix.php }}-${{ matrix.runtime }}-${{ matrix.target }}" -v

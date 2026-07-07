@@ -9,7 +9,7 @@ return [
     'manifest_path' => 'docker/.sail-extended.json',
 
     'images' => [
-        'registry' => 'ghcr.io/eloquage/laravel-sail-extended',
+        'registry' => 'ghcr.io/eloquage/laravel-sail-eloquage',
         'tag_prefix' => 'php',
         'full_stack_dependencies' => true,
     ],

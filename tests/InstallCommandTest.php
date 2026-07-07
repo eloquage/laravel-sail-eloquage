@@ -38,7 +38,7 @@ it('installs full stack compose with registry images by default', function () {
     $manifest = json_decode(file_get_contents($this->fixturePath('docker/.sail-extended.json')), true);
 
     expect($compose)
-        ->toContain('ghcr.io/eloquage/laravel-sail-extended:php-8.5-serve-development')
+        ->toContain('ghcr.io/eloquage/laravel-sail-eloquage:php-8.5-serve-development')
         ->toContain('pull_policy: missing')
         ->not->toContain('context: ./docker/8.5');
 
@@ -60,7 +60,7 @@ it('installs lean dependency sets with local docker build', function () {
     expect($compose)
         ->toContain('context: ./docker/8.5')
         ->toContain("HAS_POSTGRES: '1'")
-        ->not->toContain('ghcr.io/eloquage/laravel-sail-extended');
+        ->not->toContain('ghcr.io/eloquage/laravel-sail-eloquage');
 });
 
 it('installs with octane frankenphp dockerfile', function () {

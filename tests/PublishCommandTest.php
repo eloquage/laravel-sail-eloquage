@@ -14,7 +14,7 @@ it('switches compose to local build after publish', function () {
     $compose = file_get_contents($this->fixturePath('compose.yaml'));
 
     expect($compose)
-        ->toContain('ghcr.io/eloquage/laravel-sail-extended')
+        ->toContain('ghcr.io/eloquage/laravel-sail-eloquage')
         ->toContain('pull_policy: missing')
         ->not->toContain('context: ./docker/8.5');
 
