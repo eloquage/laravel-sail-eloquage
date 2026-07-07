@@ -2,6 +2,10 @@
 
 All notable changes to `laravel-sail-extended` will be documented in this file.
 
+## v0.1 - 2026-07-07
+
+**Full Changelog**: https://github.com/eloquage/laravel-sail-eloquage/compare/0.1...v0.1
+
 ## 0.1 - 2026-07-07
 
 ### What's Changed
