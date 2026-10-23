@@ -9,6 +9,10 @@ it('registers sail extended commands', function () {
     expect(Artisan::all())->toHaveKeys(['sail:install', 'sail:add', 'sail:publish']);
 });
 
+it('keeps Laravel framework commands registered', function () {
+    expect(Artisan::all())->toHaveKeys(['package:discover', 'migrate']);
+});
+
 it('resolves sail install to extended command', function () {
     expect(Artisan::all()['sail:install'])->toBeInstanceOf(InstallCommand::class);
 });

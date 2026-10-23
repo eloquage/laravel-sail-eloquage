@@ -1,6 +1,6 @@
 {
 	"name": "eloquage/laravel-sail-extended",
-	"description": "Laravel Sail osteroids for production!",
+	"description": "Extend Laravel Sail with additional runtimes, services, and Compose scaffolding.",
 	"keywords": ["Eloquage", "laravel", "laravel-sail-extended"],
 	"homepage": "https://github.com/eloquage/laravel-sail-extended",
 	"license": "MIT",
@@ -45,7 +45,7 @@
 	"scripts": {
 		"post-autoload-dump": "@composer run prepare",
 		"prepare": "@php vendor/bin/testbench package:discover --ansi",
-		"analyse": "vendor/bin/phpstan analyse",
+		"analyse": "vendor/bin/phpstan analyse --memory-limit=1G",
 		"test": "vendor/bin/pest",
 		"test-coverage": "vendor/bin/pest --coverage",
 		"format": "vendor/bin/pint"
