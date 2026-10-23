@@ -12,7 +12,6 @@ class LaravelSailExtendedServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/sail-extended.php', 'sail-extended');
 
         $this->app->singleton(SailCommandRegistrar::class);
-
         $this->app->make(SailCommandRegistrar::class)->register();
     }
 
